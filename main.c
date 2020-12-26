@@ -70,7 +70,7 @@ int main(int argc, char **argv){
 
             printf("Goodbye!\n");
 
-            break;
+            return EXIT_SUCCESS;
         }
 
         pipeCheck = 0;
@@ -148,23 +148,28 @@ int main(int argc, char **argv){
                     puts("error f2");
 
                 }
+                int s1 = dup(0);
 
                 dup2(f1, 0);
                 close(f1);
 
+                int s2 = dup(1);
+
                 dup2(f2, 1);
                 close(f2);
-
 
                 resetC(cmd);
 
                 splitCommands(first, cmd);
 
-
-                //execvp(cmd[0], cmd);
                 execSimpleCommand(cmd);
 
+                dup2(s1, 0);
+                close(s1);
 
+                dup2(s2, 1);
+                close(s2);
+                printBash();
 
             }
 
@@ -188,8 +193,6 @@ int main(int argc, char **argv){
                 file2 = skipwhite(file2);
 
                 file1[strlen(file1) -1] = '\0';
-                file2[strlen(file2) -1] = '\0';
-
 
                 f1 = open(file1, O_RDONLY, 0644);
                 if (f1 < 0){
@@ -201,9 +204,11 @@ int main(int argc, char **argv){
 
                 }
 
+                int s1 = dup(0);
                 dup2(f1, 0);
                 close(f1);
 
+                int s2 = dup(1);
                 dup2(f2, 1);
                 close(f2);
 
@@ -213,6 +218,13 @@ int main(int argc, char **argv){
                 splitCommands(first, cmd);
 
                 execSimpleCommand(cmd);
+
+                dup2(s1, 0);
+                close(s1);
+                dup2(s2, 1);
+                close(s2);
+
+                printBash();
 
             }
 
@@ -358,6 +370,5 @@ int main(int argc, char **argv){
         }
 
     }
-
     return EXIT_SUCCESS;
 }
