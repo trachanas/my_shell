@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/wait.h>
 #include <fcntl.h>
 #include <ctype.h>
 
@@ -11,22 +10,15 @@
 #define RESET "\x1B[0m"
 
 #define MAX_COM 1024
-#define MAX_LIST 10
-
-
-
 
 
 int main(int argc, char **argv){
 
-    int pipeCheck = -1, redirectCheck = -1, simpleCheck = -1;
-
-    char *commands[MAX_COM];
     char userInput[MAX_COM];
     char *c1 = NULL;
     char *c2 = NULL;
     char *token = NULL;
-    char *firstCmd = NULL;
+
     int f;
     printDirectory();
     printf("\n\n");
@@ -49,9 +41,6 @@ int main(int argc, char **argv){
     for (int i = 0; i < MAX_COM; i++){
         cmdPipe[i] = calloc(MAX_COM, sizeof(char));
     }
-    int i = 0;
-    int count = 0;
-    int charCount = 0;
     int countPipes = 0;
 
     char *t;
@@ -73,10 +62,6 @@ int main(int argc, char **argv){
             return EXIT_SUCCESS;
         }
 
-        pipeCheck = 0;
-        redirectCheck = 0;
-        simpleCheck = 0;
-
         if (isPipe(userInput)) {
             countPipes = 0;
             for (int l = 0; userInput[l] != '\0'; l++){
@@ -85,8 +70,83 @@ int main(int argc, char **argv){
                 }
             }
 
-            if (countPipes == 1){
+            if (countPipes == 1 && strstr(userInput, ">>") != NULL){
                 token = NULL;
+
+                resetC(cmd);
+
+                resetC(cmdPipe);
+
+                token = strtok(userInput, ">>");
+
+                char *piped = strdup(token);
+
+                token = strtok(NULL, ">>");
+
+                char *file = strdup(token);
+
+                file = skipwhite(file);
+
+                token = strtok(piped, "|");
+
+                c1 = strdup(token);
+
+                token = strtok(NULL, "|");
+
+                c2 = strdup(token);
+                c2 = skipwhite(c2);
+
+
+                splitCommands(c1, cmd);
+
+                splitCommands(c2, cmdPipe);
+
+                execPipedCommandsRed(cmd, cmdPipe, file);
+
+                memset(userInput, '\0', 1000);
+            }
+            else if (countPipes == 1 && strstr(userInput, ">") != NULL){
+                token = NULL;
+
+                resetC(cmd);
+
+                resetC(cmdPipe);
+
+                token = strtok(userInput, ">");
+
+                char *piped = strdup(token);
+
+                token = strtok(NULL, ">");
+
+                char *file = strdup(token);
+
+                file = skipwhite(file);
+
+                token = strtok(piped, "|");
+
+                c1 = strdup(token);
+
+                token = strtok(NULL, "|");
+
+                c2 = strdup(token);
+
+                c2 = skipwhite(c2);
+
+                splitCommands(c1, cmd);
+                int s2 = dup(1);
+                splitCommands(c2, cmdPipe);
+
+                execPipedCommandsWithRed(cmd, cmdPipe, file);
+
+
+
+
+                memset(userInput, '\0', 1000);
+            }
+            else if (countPipes == 1) {
+
+                token = NULL;
+
                 resetC(cmd);
 
                 resetC(cmdPipe);
@@ -107,16 +167,11 @@ int main(int argc, char **argv){
 
                 memset(userInput, '\0', 1000);
             }
-            else if (countPipes > 1) {
-
-            }
 
         }
         else if (isRedirect(userInput)) {
 
-            char copy[1000];
             resetC(cmd);
-
 
             // C1 < C2 >> C3
             if (strstr(userInput, "<") != NULL && strstr(userInput, ">>") != NULL){
@@ -175,7 +230,6 @@ int main(int argc, char **argv){
 
             // C1 < C2 > C3
             else if (strstr(userInput, "<") != NULL && strstr(userInput, ">") != NULL){
-                puts("C1 < C2 > C3");
 
                 token = strtok(userInput, "<");
 
@@ -201,7 +255,6 @@ int main(int argc, char **argv){
                 f2 = open(file2, O_CREAT | O_WRONLY | O_TRUNC, 0644);
                 if (f2 < 0) {
                     puts("error f2");
-
                 }
 
                 int s1 = dup(0);
@@ -227,87 +280,65 @@ int main(int argc, char **argv){
                 printBash();
 
             }
-
-
             // C1 > C2
-
             else if (strstr(userInput, ">") != NULL && strstr(userInput, ">>") == NULL){
-                puts("C1 > C2");
 
-                 resetC(cmd);
+                resetC(cmd);
 
                 t = strtok(userInput, ">");
 
                 c = strdup(t);
 
-                puts(c);
-
                 t = strtok(NULL, ">");
 
                 char *file = strdup(t);
-
-                puts(file);
 
                 splitCommands(c,cmd);
 
                 file = skipwhite(file);
 
                 f = open(file, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+
                 int save = dup(1);
                 dup2(f,1);
 
                 close(f);
 
-//                for(int y = 0; cmd[y] != NULL; y++){
-//                    printf("cmd[%d] %s\n", y, cmd[y]);
-//                }
                 execSimpleCommand(cmd);
 
                 dup2(save, 1);
                 close(save);
                 printBash();
-
-
             }
 
             // C1 >> C2
             else if (strstr(userInput, ">>") != NULL && strstr(userInput, "<") == NULL){
-                puts("C1 >> C2");
-
-
-                 resetC(cmd);
+                resetC(cmd);
 
                 t = strtok(userInput, ">>");
 
                 c = strdup(t);
 
-                puts(c);
-
                 t = strtok(NULL, ">>");
 
                 char *file = strdup(t);
-
-                puts(file);
 
                 splitCommands(c,cmd);
 
                 file = skipwhite(file);
 
                 f = open(file, O_WRONLY| O_APPEND | O_CREAT, 0600);
-                int save = dup(1);
 
+                int save = dup(1);
 
                 dup2(f,1);
 
                 close(f);
 
-                //execvp(cmd[0], cmd);
-                for(int y = 0; cmd[y] != NULL; y++){
-                    printf("cmd[%d] %s\n", y, cmd[y]);
-                }
                 execSimpleCommand(cmd);
 
                 dup2(save, 1);
+
                 close(save);
 
                 printBash();
@@ -316,21 +347,15 @@ int main(int argc, char **argv){
 
             // C1 < C2
             else if (strstr(userInput, "<") != NULL && strstr(userInput, "<<") == NULL) {
-                puts("C1 < C2");
-
                 resetC(cmd);
 
                 t = strtok(userInput, "<");
 
                 c = strdup(t);
 
-                puts(c);
-
                 t = strtok(NULL, "<");
 
                 char *file = strdup(t);
-
-                puts(file);
 
                 splitCommands(c,cmd);
 
@@ -344,16 +369,10 @@ int main(int argc, char **argv){
 
                 close(f);
 
-                //puts(c);
-                for (int b = 0; cmd[b] != NULL; b++){
-                    puts(cmd[b]);
-                }
-                //execvp(c, cmd);
                 execSimpleCommand(cmd);
                 dup2(save, 0);
                 close(save);
                 printBash();
-
             }
 
         }

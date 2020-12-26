@@ -19,13 +19,6 @@
 
 
 
-
-// Output: prints the bash prompt
-void printBash(){
-    printf("myBash$ ");
-}
-
-
 // Output: prints the current directory
 
 void printDirectory(){
@@ -34,9 +27,15 @@ void printDirectory(){
 
     getcwd(dir, sizeof(dir));
 
-    printf("We are in " YEL "%s" RESET " directory!\n", dir);
+    printf("%s/", dir);
 }
 
+
+// Output: prints the bash prompt
+void printBash(){
+    printDirectory();
+    printf("myBash >>>  ");
+}
 
 // Input: string from stdin
 // Output: 1 if its a pipe, 0 otherwise
@@ -59,15 +58,6 @@ int isRedirect(char *string){
     }
 }
 
-int isSimpleCommand(char *string){
-
-    if (strchr(string, '+') != NULL){
-        return 1;
-    } else{
-        return 0;
-    }
-
-}
 
 
 void splitCommands(char *string, char **cmd){
@@ -176,6 +166,138 @@ void execPipedCommands(char **cmd, char **cmdPiped) {
 
     }
 }
+
+
+
+void execPipedCommandsRed(char **cmd, char **cmdPiped, char *file){
+    int pipeOne[2], status, ret_val, s;
+
+    status = pipe(pipeOne);
+    if (status < 0) {
+        exit(-1);
+    }
+    int k;
+    int e = dup(1);
+    pid_t p1, p2, w;
+    int s2 = dup(1);
+    p1 = fork();
+
+    if (p1 < 0) {
+        printf("Fork failed!\n");
+    }
+
+    if (p1 == 0) {
+
+        close(pipeOne[READ]);
+
+        dup2(pipeOne[WRITE], STDOUT_FILENO);
+
+        close(pipeOne[WRITE]);
+
+        if (execvp(cmd[0], cmd) < 0) {
+            perror("Lathos");
+        }
+
+    } else {
+        p2 = fork();
+
+        if (p2 < 0) {
+            printf("Fork failed\n");
+        }
+
+        if (p2 == 0) {
+
+            close(pipeOne[WRITE]);
+
+            dup2(pipeOne[READ], STDIN_FILENO);
+
+            close(pipeOne[READ]);
+
+            k = open(file, O_WRONLY| O_APPEND | O_CREAT, 0644);
+            if (k < 0) {
+                puts("error k");
+            }
+
+            dup2(k, 1);
+            close(k);
+
+            if (execvp(cmdPiped[0], cmdPiped) < 0) {
+                perror("Lathos!");
+            }
+        } else {
+            // parent is waiting
+            waitpid(-1, &s, WUNTRACED | WCONTINUED);
+            printBash();
+        }
+
+    }
+}
+
+void execPipedCommandsWithRed(char **cmd, char **cmdPiped, char *file){
+    int pipeOne[2], status, ret_val, s;
+
+    status = pipe(pipeOne);
+    if (status < 0) {
+        exit(-1);
+    }
+    int k;
+    pid_t p1, p2, w;
+    int s2 = dup(1);
+    p1 = fork();
+
+    if (p1 < 0) {
+        printf("Fork failed!\n");
+    }
+
+    if (p1 == 0) {
+
+        close(pipeOne[READ]);
+
+        dup2(pipeOne[WRITE], STDOUT_FILENO);
+
+        close(pipeOne[WRITE]);
+
+        if (execvp(cmd[0], cmd) < 0) {
+            perror("Lathos");
+        }
+
+    } else {
+        p2 = fork();
+
+        if (p2 < 0) {
+            printf("Fork failed\n");
+        }
+
+        if (p2 == 0) {
+
+            close(pipeOne[WRITE]);
+
+            dup2(pipeOne[READ], STDIN_FILENO);
+
+            close(pipeOne[READ]);
+
+            k = open(file, O_WRONLY | O_CREAT, 0644);
+            if (k < 0) {
+                puts("error k");
+            }
+
+            dup2(k, 1);
+            close(k);
+            if (execvp(cmdPiped[0], cmdPiped) < 0) {
+                perror("Lathos!");
+            }
+        } else {
+            // parent is waiting
+
+            waitpid(-1, &s, WUNTRACED | WCONTINUED);
+            printBash();
+        }
+
+    }
+}
+
+
+
 
 char* skipwhite(char* s)
 {
