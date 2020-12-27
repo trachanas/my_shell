@@ -135,6 +135,8 @@ void execPipedCommands(char **cmd, char **cmdPiped) {
         dup2(pipeOne[WRITE], STDOUT_FILENO);
 
         close(pipeOne[WRITE]);
+        close(pipeOne[READ]);
+
         if (execvp(cmd[0], cmd) < 0) {
             perror("Lathos");
         }
@@ -153,6 +155,7 @@ void execPipedCommands(char **cmd, char **cmdPiped) {
             dup2(pipeOne[READ], STDIN_FILENO);
 
             close(pipeOne[READ]);
+            close(pipeOne[WRITE]);
 
             if (execvp(cmdPiped[0], cmdPiped) < 0) {
                 perror("Lathos!");
