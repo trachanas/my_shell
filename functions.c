@@ -113,14 +113,14 @@ void execSimpleCommand(char **cmd) {
 
 void execPipedCommands(char **cmd, char **cmdPiped) {
 
-    int pipeOne[2], status, ret_val, s;
+    int pipeOne[2], status, s;
 
     status = pipe(pipeOne);
     if (status < 0) {
         exit(-1);
     }
 
-    pid_t p1, p2, w;
+    pid_t p1, p2;
 
     p1 = fork();
 
@@ -135,7 +135,6 @@ void execPipedCommands(char **cmd, char **cmdPiped) {
         dup2(pipeOne[WRITE], STDOUT_FILENO);
 
         close(pipeOne[WRITE]);
-
         if (execvp(cmd[0], cmd) < 0) {
             perror("Lathos");
         }
@@ -189,6 +188,7 @@ void execPipedCommandsRed(char **cmd, char **cmdPiped, char *file){
     if (p1 == 0) {
 
         close(pipeOne[READ]);
+        printf("pipeOne-WRITE %d\n", pipeOne[WRITE]);
 
         dup2(pipeOne[WRITE], STDOUT_FILENO);
 
@@ -210,6 +210,7 @@ void execPipedCommandsRed(char **cmd, char **cmdPiped, char *file){
             close(pipeOne[WRITE]);
 
             dup2(pipeOne[READ], STDIN_FILENO);
+            printf("pipeOne-READ %d\n", pipeOne[READ]);
 
             close(pipeOne[READ]);
 
@@ -217,8 +218,10 @@ void execPipedCommandsRed(char **cmd, char **cmdPiped, char *file){
             if (k < 0) {
                 puts("error k");
             }
+            printf("k %d\n", k);
 
             dup2(k, 1);
+
             close(k);
 
             if (execvp(cmdPiped[0], cmdPiped) < 0) {
@@ -241,6 +244,8 @@ void execPipedCommandsWithRed(char **cmd, char **cmdPiped, char *file){
         exit(-1);
     }
     int k;
+    int k1 = dup(1);
+    int k0 = dup(0);
     pid_t p1, p2, w;
     int s2 = dup(1);
     p1 = fork();
@@ -262,6 +267,7 @@ void execPipedCommandsWithRed(char **cmd, char **cmdPiped, char *file){
         }
 
     } else {
+
         p2 = fork();
 
         if (p2 < 0) {
@@ -288,7 +294,8 @@ void execPipedCommandsWithRed(char **cmd, char **cmdPiped, char *file){
             }
         } else {
             // parent is waiting
-
+            dup2(s2, 1);
+            close(s2);
             waitpid(-1, &s, WUNTRACED | WCONTINUED);
             printBash();
         }

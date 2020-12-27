@@ -100,9 +100,10 @@ int main(int argc, char **argv){
                 splitCommands(c1, cmd);
 
                 splitCommands(c2, cmdPipe);
-
+                int s = dup(1);
                 execPipedCommandsRed(cmd, cmdPipe, file);
-
+                dup2(s,1);
+                close(s);
                 memset(userInput, '\0', 1000);
             }
             else if (countPipes == 1 && strstr(userInput, ">") != NULL){
@@ -137,10 +138,8 @@ int main(int argc, char **argv){
                 splitCommands(c2, cmdPipe);
 
                 execPipedCommandsWithRed(cmd, cmdPipe, file);
-
-
-
-
+                dup2(s2, 1);
+                close(s2);
                 memset(userInput, '\0', 1000);
             }
             else if (countPipes == 1) {
