@@ -130,12 +130,15 @@ void execPipedCommands(char **cmd, char **cmdPiped) {
 
     if (p1 == 0) {
 
-        close(pipeOne[READ]);
+        if (close(pipeOne[READ])){
+            puts("close 1");
+        }
 
         dup2(pipeOne[WRITE], STDOUT_FILENO);
 
-        close(pipeOne[WRITE]);
-        close(pipeOne[READ]);
+        if (close(pipeOne[WRITE])){
+            puts("close 2");
+        }
 
         if (execvp(cmd[0], cmd) < 0) {
             perror("Lathos");
@@ -150,13 +153,18 @@ void execPipedCommands(char **cmd, char **cmdPiped) {
 
         if (p2 == 0) {
 
-            close(pipeOne[WRITE]);
-
+            //close(pipeOne[WRITE]);
+            if (close(pipeOne[WRITE])){
+                puts("close 3");
+            }
             dup2(pipeOne[READ], STDIN_FILENO);
 
-            close(pipeOne[READ]);
-            close(pipeOne[WRITE]);
+            //close(pipeOne[READ]);
 
+
+            if (close(pipeOne[READ])){
+                puts("close 4");
+            }
             if (execvp(cmdPiped[0], cmdPiped) < 0) {
                 perror("Lathos!");
             }
