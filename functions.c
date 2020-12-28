@@ -111,6 +111,14 @@ void execSimpleCommand(char **cmd) {
 
 }
 
+
+void execPipe(char **cmd, char **cmdPiped){
+    int fd1[2], fd2[2];
+    int pid;
+
+
+}
+
 void execPipedCommands(char **cmd, char **cmdPiped) {
 
     int pipeOne[2], status, s;
@@ -130,76 +138,7 @@ void execPipedCommands(char **cmd, char **cmdPiped) {
 
     if (p1 == 0) {
 
-        if (close(pipeOne[READ])){
-            puts("close 1");
-        }
-
-        dup2(pipeOne[WRITE], STDOUT_FILENO);
-
-        if (close(pipeOne[WRITE])){
-            puts("close 2");
-        }
-
-        if (execvp(cmd[0], cmd) < 0) {
-            perror("Lathos");
-        }
-
-    } else {
-        p2 = fork();
-
-        if (p2 < 0) {
-            printf("Fork failed\n");
-        }
-
-        if (p2 == 0) {
-
-            //close(pipeOne[WRITE]);
-            if (close(pipeOne[WRITE])){
-                puts("close 3");
-            }
-            dup2(pipeOne[READ], STDIN_FILENO);
-
-            //close(pipeOne[READ]);
-
-
-            if (close(pipeOne[READ])){
-                puts("close 4");
-            }
-            if (execvp(cmdPiped[0], cmdPiped) < 0) {
-                perror("Lathos!");
-            }
-        } else {
-            // parent is waiting
-            waitpid(-1, &s, WUNTRACED | WCONTINUED);
-            printBash();
-        }
-
-    }
-}
-
-
-
-void execPipedCommandsRed(char **cmd, char **cmdPiped, char *file){
-    int pipeOne[2], status, ret_val, s;
-
-    status = pipe(pipeOne);
-    if (status < 0) {
-        exit(-1);
-    }
-    int k;
-    int e = dup(1);
-    pid_t p1, p2, w;
-    int s2 = dup(1);
-    p1 = fork();
-
-    if (p1 < 0) {
-        printf("Fork failed!\n");
-    }
-
-    if (p1 == 0) {
-
         close(pipeOne[READ]);
-        printf("pipeOne-WRITE %d\n", pipeOne[WRITE]);
 
         dup2(pipeOne[WRITE], STDOUT_FILENO);
 
@@ -221,6 +160,66 @@ void execPipedCommandsRed(char **cmd, char **cmdPiped, char *file){
             close(pipeOne[WRITE]);
 
             dup2(pipeOne[READ], STDIN_FILENO);
+
+            close(pipeOne[READ]);
+
+            if (execvp(cmdPiped[0], cmdPiped) < 0) {
+                perror("Lathos!");
+            }
+        } else {
+            // parent is waiting
+            close(pipeOne[0]);
+            close(pipeOne[1]);
+            wait(NULL);
+            printBash();
+        }
+
+    }
+}
+
+
+// C1 | C2 >> FILE
+void execPipedCommandsRed(char **cmd, char **cmdPiped, char *file){
+    int pipeOne[2], status, ret_val, s;
+
+    status = pipe(pipeOne);
+    if (status < 0) {
+        exit(-1);
+    }
+    int k;
+    pid_t p1, p2, w;
+    p1 = fork();
+
+    if (p1 < 0) {
+        printf("Fork failed!\n");
+    }
+
+    if (p1 == 0) {
+
+        close(pipeOne[READ]);
+
+        dup2(pipeOne[WRITE], STDOUT_FILENO);
+        printf("pipeOne-WRITE %d\n", pipeOne[WRITE]);
+
+        close(pipeOne[WRITE]);
+
+        if (execvp(cmd[0], cmd) < 0) {
+            perror("Lathos");
+        }
+
+    } else {
+        p2 = fork();
+
+        if (p2 < 0) {
+            printf("Fork failed\n");
+        }
+
+        if (p2 == 0) {
+
+            close(pipeOne[WRITE]);
+
+            dup2(pipeOne[READ], STDIN_FILENO);
+
             printf("pipeOne-READ %d\n", pipeOne[READ]);
 
             close(pipeOne[READ]);
@@ -232,7 +231,6 @@ void execPipedCommandsRed(char **cmd, char **cmdPiped, char *file){
             printf("k %d\n", k);
 
             dup2(k, 1);
-
             close(k);
 
             if (execvp(cmdPiped[0], cmdPiped) < 0) {
@@ -240,13 +238,18 @@ void execPipedCommandsRed(char **cmd, char **cmdPiped, char *file){
             }
         } else {
             // parent is waiting
-            waitpid(-1, &s, WUNTRACED | WCONTINUED);
+            //waitpid(-1, &s, WUNTRACED | WCONTINUED);
+            close(pipeOne[0]);
+            close(pipeOne[1]);
+            wait(NULL);
+
             printBash();
         }
 
     }
 }
 
+// C1 | C2 > FILE
 void execPipedCommandsWithRed(char **cmd, char **cmdPiped, char *file){
     int pipeOne[2], status, ret_val, s;
 
@@ -304,10 +307,13 @@ void execPipedCommandsWithRed(char **cmd, char **cmdPiped, char *file){
                 perror("Lathos!");
             }
         } else {
+            close(pipeOne[0]);
+            close(pipeOne[1]);
+            wait(NULL);
             // parent is waiting
-            dup2(s2, 1);
-            close(s2);
-            waitpid(-1, &s, WUNTRACED | WCONTINUED);
+//            dup2(s2, 1);
+//            close(s2);
+//            waitpid(-1, &s, WUNTRACED | WCONTINUED);
             printBash();
         }
 

@@ -71,6 +71,8 @@ int main(int argc, char **argv){
             }
 
             if (countPipes == 1 && strstr(userInput, ">>") != NULL){
+                puts("mpike |>>");
+
                 token = NULL;
 
                 resetC(cmd);
@@ -107,6 +109,8 @@ int main(int argc, char **argv){
                 memset(userInput, '\0', 1000);
             }
             else if (countPipes == 1 && strstr(userInput, ">") != NULL){
+                puts("mpike | > ");
+
                 token = NULL;
 
                 resetC(cmd);
@@ -161,10 +165,13 @@ int main(int argc, char **argv){
                 splitCommands(c1, cmd);
 
                 splitCommands(c2, cmdPipe);
-
+                puts("mpike | ");
                 execPipedCommands(cmd, cmdPipe);
 
                 memset(userInput, '\0', 1000);
+            }
+            else if (countPipes > 1) {
+                printf("Multiple piping!\n");
             }
 
         }
@@ -377,7 +384,7 @@ int main(int argc, char **argv){
         }
         else {
             resetC(cmd);
-
+            puts("Simple command");
             splitCommands(userInput, cmd);
 
             execSimpleCommand(cmd);
