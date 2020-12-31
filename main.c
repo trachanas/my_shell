@@ -6,8 +6,6 @@
 #include <fcntl.h>
 #include <ctype.h>
 
-#define YEL   "\x1B[33m"
-#define RESET "\x1B[0m"
 
 #define MAX_COM 1024
 
@@ -18,6 +16,8 @@ int main(int argc, char **argv){
     char *c1 = NULL;
     char *c2 = NULL;
     char *token = NULL;
+    char *t;
+    char *c;
 
     int f;
     printDirectory();
@@ -41,10 +41,9 @@ int main(int argc, char **argv){
     for (int i = 0; i < MAX_COM; i++){
         cmdPipe[i] = calloc(MAX_COM, sizeof(char));
     }
+
     int countPipes = 0;
 
-    char *t;
-    char *c;
 
     while(fgets(userInput, MAX_COM, stdin) != NULL){
 
@@ -56,6 +55,10 @@ int main(int argc, char **argv){
         userInput[strlen(userInput) - 1] = '\0';
 
         if (strcmp(userInput, "exit") == 0){
+
+            freeStrings(cmd);
+
+            freeStrings(cmdPipe);
 
             printf("Goodbye!\n");
 
@@ -96,16 +99,20 @@ int main(int argc, char **argv){
                 token = strtok(NULL, "|");
 
                 c2 = strdup(token);
-                c2 = skipwhite(c2);
 
+                c2 = skipwhite(c2);
 
                 splitCommands(c1, cmd);
 
                 splitCommands(c2, cmdPipe);
                 int s = dup(1);
+
                 execPipedCommandsRed(cmd, cmdPipe, file);
+
                 dup2(s,1);
+
                 close(s);
+
                 memset(userInput, '\0', 1000);
             }
             else if (countPipes == 1 && strstr(userInput, ">") != NULL){
@@ -165,13 +172,17 @@ int main(int argc, char **argv){
                 splitCommands(c1, cmd);
 
                 splitCommands(c2, cmdPipe);
-                puts("mpike | ");
+
                 execPipedCommands(cmd, cmdPipe);
 
                 memset(userInput, '\0', 1000);
             }
             else if (countPipes > 1) {
-                printf("Multiple piping!\n");
+                printf("Pipes are %d!\n", countPipes);
+
+                execMultipleCommands(userInput, countPipes + 1);
+
+                memset(userInput, '\0', 1000);
             }
 
         }

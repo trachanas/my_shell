@@ -8,15 +8,17 @@
 #include <sys/wait.h>
 #include <ctype.h>
 
-
-#define YEL   "\x1B[33m"
-#define RESET "\x1B[0m"
-
 #define MAX_COM 1024
-#define MAX_LIST 10
 #define READ 0
 #define WRITE 1
 
+
+void  freeStrings(char **cmd){
+    for (int i = 0; i < MAX_COM; i++){
+        free(cmd[i]);
+    }
+    free(cmd);
+}
 
 
 // Output: prints the current directory
@@ -87,6 +89,86 @@ void resetC(char **cmd) {
         cmd[k] = NULL;
     }
 }
+
+void splitPipes(char **cmd, int *nCom, char *string){
+
+    char *token = strtok(string, "|");
+
+    int i = 0;
+
+    while(token != NULL){
+
+        cmd[i] = strdup(token);
+
+        cmd[i] = skipwhite(cmd[i]);
+
+        i++;
+
+        token = strtok(NULL, "|");
+    }
+
+    cmd[i] = NULL;
+
+    *nCom = i;
+}
+
+void execMultipleCommands(char *userInput, int count){
+
+    int fd[10][2], nCom;
+    char *c[1000];
+    pid_t pid;
+    //the number of piped commands is countPipes + 1
+
+    char **cmd = calloc(MAX_COM, sizeof(char *));
+    for (int i = 0; i < MAX_COM; i++){
+        cmd[i] = calloc(MAX_COM, sizeof(char));
+    }
+    splitPipes(cmd, &nCom, userInput);
+
+    char **cmd1 = calloc(MAX_COM, sizeof(char *));
+    for (int i = 0; i < MAX_COM; i++){
+        cmd1[i] = calloc(MAX_COM, sizeof(char));
+    }
+    //printf("Count pipes is %d\n", countPipes);
+
+
+    for(int i=0;i<count;i++){
+        splitCommands(cmd[i], cmd1);
+        if(i!=count-1){
+            if(pipe(fd[i])<0){
+                perror("pipe creating was not successfull\n");
+                return;
+            }
+        }
+        if(fork()==0){//child1
+            if(i!=count-1){
+                printf("i in C1 %d\n", i);
+                dup2(fd[i][1],1);
+                close(fd[i][0]);
+                close(fd[i][1]);
+            }
+            if(i!=0){
+                printf("i in C2 %d\n", i);
+
+                dup2(fd[i-1][0],0);
+                close(fd[i-1][1]);
+                close(fd[i-1][0]);
+            }
+            execvp(cmd1[0],cmd1);
+            perror("invalid input ");
+            exit(1);//in case exec is not successfull, exit
+        }
+        //parent
+        if(i!=0){//second process
+            printf("i in P1 %d\n", i);
+            close(fd[i-1][0]);
+            close(fd[i-1][1]);
+        }
+        wait(NULL);
+    }
+}
+
+
 
 void execSimpleCommand(char **cmd) {
 

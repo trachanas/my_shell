@@ -1,5 +1,6 @@
 void printBash();
 void printDirectory();
+void  freeStrings(char **);
 
 int isPipe(char *);
 int isRedirect(char *);
@@ -15,3 +16,5 @@ char* skipwhite(char* );
 void execPipedCommandsRed(char **, char **, char *);
 void execPipedCommandsWithRed(char **, char **, char *);
 void execPipe(char **, char **);
+void splitPipes(char **, int *, char *);
+void execMultipleCommands(char *, int );
