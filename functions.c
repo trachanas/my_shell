@@ -13,8 +13,6 @@
 #define WRITE 1
 
 
-
-
 // Output: prints the current directory
 
 void printDirectory(){
@@ -34,8 +32,6 @@ void printBash(){
     printf("myBash >>>  ");
 }
 
-// Input: string from stdin
-// Output: 1 if its a pipe, 0 otherwise
 int isPipe(char *string){
 
     if (strchr(string, '|') != NULL){
@@ -56,7 +52,8 @@ int isRedirect(char *string){
 }
 
 
-
+// Input: a simple command from stdin
+// Output: an array with the command fr arr = {"ls", "-l", NULL}
 void splitCommands(char *string, char **cmd){
 
     char *token = NULL;
@@ -75,9 +72,9 @@ void splitCommands(char *string, char **cmd){
     }
 
     cmd[i] = NULL;
-
-
 }
+
+
 
 void resetC(char **cmd) {
     for (int k = 0; k < MAX_COM; k++){
@@ -85,6 +82,9 @@ void resetC(char **cmd) {
     }
 }
 
+
+// Input: a piped command from stdin
+// Output: an array with the command fr arr = {"ls -l", "grep .c", NULL}
 void splitPipes(char **cmd, int *nCom, char *string){
 
     char *token = strtok(string, "|");
@@ -107,12 +107,15 @@ void splitPipes(char **cmd, int *nCom, char *string){
     *nCom = i;
 }
 
+
+
+// Input: a set of piped commands, like C1 | C2 |...| Cn and the number of |
+// Output: execution of the piped commands
 void execMultipleCommands(char *userInput, int count){
 
     int fd[10][2], nCom;
 
     pid_t pid;
-    //the number of piped commands is countPipes + 1
 
     char **cmd = calloc(MAX_COM, sizeof(char *));
     for (int i = 0; i < MAX_COM; i++){
@@ -124,39 +127,52 @@ void execMultipleCommands(char *userInput, int count){
     for (int i = 0; i < MAX_COM; i++){
         cmd1[i] = calloc(MAX_COM, sizeof(char));
     }
-    //printf("Count pipes is %d\n", countPipes);
 
 
-    for(int i=0;i<count;i++){
+    for (int i = 0; i < count; i++){
+
         splitCommands(cmd[i], cmd1);
-        if(i!=count-1){
-            if(pipe(fd[i])<0){
-                perror("pipe creating was not successfull\n");
+
+        if(i != count - 1){
+            if(pipe(fd[i]) < 0){
+                perror("Error with pipe!");
+
                 return;
             }
         }
-        if(fork()==0){//child1
-            if(i!=count-1){
-                printf("i in C1 %d\n", i);
+
+        pid = fork();
+
+        if (pid == -1){
+            perror("Error with fork!");
+            return;
+        }
+
+        if (pid == 0){
+            if(i != count - 1){
                 dup2(fd[i][1],1);
+
                 close(fd[i][0]);
+
                 close(fd[i][1]);
             }
-            if(i!=0){
-                printf("i in C2 %d\n", i);
-
+            if(i != 0){
                 dup2(fd[i-1][0],0);
+
                 close(fd[i-1][1]);
+
                 close(fd[i-1][0]);
             }
+
             execvp(cmd1[0],cmd1);
-            perror("invalid input ");
-            exit(1);//in case exec is not successfull, exit
+
+            perror("Error with exec!");
+            return;
         }
-        //parent
-        if(i!=0){//second process
-            printf("i in P1 %d\n", i);
+
+        if(i != 0){
             close(fd[i-1][0]);
+
             close(fd[i-1][1]);
         }
         wait(NULL);
@@ -167,44 +183,45 @@ void execMultipleCommands(char *userInput, int count){
 
 void execSimpleCommand(char **cmd) {
 
-    int ret_val = 0;
-
     pid_t pid = fork();
 
     if (pid == -1){
-        printf("Failed creating a child process!\n");
+        perror("Error with fork!");
         return;
     }
     else if (pid == 0){
 
-        ret_val = execvp(cmd[0], cmd);
-        if (ret_val < 0) {
-            printf("\n Cannot execute \n");
-        }
+        execvp(cmd[0], cmd);
+
+        perror("Error with exec!\n");
+
+        return;
     }
     else {
         wait(NULL);
     }
-
 }
 
 
-
+// C1 | C2
 void execPipedCommands(char **cmd, char **cmdPiped) {
 
     int pipeOne[2], status, s;
 
     status = pipe(pipeOne);
     if (status < 0) {
-        exit(-1);
+        perror("Error with pipe!\n");
+
+        return;
     }
 
     pid_t p1, p2;
 
     p1 = fork();
 
-    if (p1 < 0) {
-        printf("Fork failed!\n");
+    if (p1 == -1){
+        perror("Error with fork!");
+        return;
     }
 
     if (p1 == 0) {
@@ -215,15 +232,17 @@ void execPipedCommands(char **cmd, char **cmdPiped) {
 
         close(pipeOne[WRITE]);
 
-        if (execvp(cmd[0], cmd) < 0) {
-            perror("Lathos");
-        }
+        execvp(cmd[0], cmd);
+
+        perror("Error with exec!");
+        return;
 
     } else {
         p2 = fork();
 
-        if (p2 < 0) {
-            printf("Fork failed\n");
+        if (p2 == -1){
+            perror("Error with fork!");
+            return;
         }
 
         if (p2 == 0) {
@@ -234,15 +253,16 @@ void execPipedCommands(char **cmd, char **cmdPiped) {
 
             close(pipeOne[READ]);
 
-            if (execvp(cmdPiped[0], cmdPiped) < 0) {
-                perror("Lathos!");
-            }
+            execvp(cmdPiped[0], cmdPiped);
+
+            perror("Error with exec!");
+            return;
+
         } else {
-            // parent is waiting
+
             close(pipeOne[0]);
             close(pipeOne[1]);
             wait(NULL);
-            printBash();
         }
 
     }
@@ -251,18 +271,21 @@ void execPipedCommands(char **cmd, char **cmdPiped) {
 
 // C1 | C2 >> FILE
 void execPipedCommandsRed(char **cmd, char **cmdPiped, char *file){
-    int pipeOne[2], status, ret_val, s;
+    int pipeOne[2], status, ret_val, s, k;
 
     status = pipe(pipeOne);
     if (status < 0) {
-        exit(-1);
+        perror("Error with pipe!");
+        return;
     }
-    int k;
-    pid_t p1, p2, w;
+
+
+    pid_t p1, p2;
     p1 = fork();
 
-    if (p1 < 0) {
-        printf("Fork failed!\n");
+    if (p1 == -1){
+        perror("Error with fork!");
+        return;
     }
 
     if (p1 == 0) {
@@ -270,20 +293,22 @@ void execPipedCommandsRed(char **cmd, char **cmdPiped, char *file){
         close(pipeOne[READ]);
 
         dup2(pipeOne[WRITE], STDOUT_FILENO);
-        printf("pipeOne-WRITE %d\n", pipeOne[WRITE]);
 
         close(pipeOne[WRITE]);
 
-        if (execvp(cmd[0], cmd) < 0) {
-            perror("Lathos");
-        }
+        execvp(cmd[0], cmd);
+
+        perror("Error with exec!");
+        return;
 
     } else {
         p2 = fork();
 
-        if (p2 < 0) {
-            printf("Fork failed\n");
+        if (p2 == -1){
+            perror("Error with fork!");
+            return;
         }
+
 
         if (p2 == 0) {
 
@@ -291,30 +316,28 @@ void execPipedCommandsRed(char **cmd, char **cmdPiped, char *file){
 
             dup2(pipeOne[READ], STDIN_FILENO);
 
-            printf("pipeOne-READ %d\n", pipeOne[READ]);
-
             close(pipeOne[READ]);
 
             k = open(file, O_WRONLY| O_APPEND | O_CREAT, 0644);
+
             if (k < 0) {
-                puts("error k");
+                perror("Error with file k!");
+                return;
             }
-            printf("k %d\n", k);
 
             dup2(k, 1);
             close(k);
 
-            if (execvp(cmdPiped[0], cmdPiped) < 0) {
-                perror("Lathos!");
-            }
+            execvp(cmdPiped[0], cmdPiped);
+
+            perror("Error with exec!");
+            return;
         } else {
-            // parent is waiting
-            //waitpid(-1, &s, WUNTRACED | WCONTINUED);
+
             close(pipeOne[0]);
             close(pipeOne[1]);
             wait(NULL);
 
-            printBash();
         }
 
     }
@@ -322,21 +345,20 @@ void execPipedCommandsRed(char **cmd, char **cmdPiped, char *file){
 
 // C1 | C2 > FILE
 void execPipedCommandsWithRed(char **cmd, char **cmdPiped, char *file){
-    int pipeOne[2], status, ret_val, s;
+    int pipeOne[2], status, k;
 
     status = pipe(pipeOne);
     if (status < 0) {
-        exit(-1);
+        perror("Error with pipe!");
+        return;
     }
-    int k;
-    int k1 = dup(1);
-    int k0 = dup(0);
-    pid_t p1, p2, w;
-    int s2 = dup(1);
+    pid_t p1, p2;
+
     p1 = fork();
 
-    if (p1 < 0) {
-        printf("Fork failed!\n");
+    if (p1 == -1){
+        perror("Error with fork!");
+        return;
     }
 
     if (p1 == 0) {
@@ -347,16 +369,19 @@ void execPipedCommandsWithRed(char **cmd, char **cmdPiped, char *file){
 
         close(pipeOne[WRITE]);
 
-        if (execvp(cmd[0], cmd) < 0) {
-            perror("Lathos");
-        }
+        execvp(cmd[0], cmd);
+
+        perror("Error with exec!");
+
+        return;
 
     } else {
 
         p2 = fork();
 
-        if (p2 < 0) {
-            printf("Fork failed\n");
+        if (p2 == -1){
+            perror("Error with fork!");
+            return;
         }
 
         if (p2 == 0) {
@@ -369,31 +394,27 @@ void execPipedCommandsWithRed(char **cmd, char **cmdPiped, char *file){
 
             k = open(file, O_WRONLY | O_CREAT, 0644);
             if (k < 0) {
-                puts("error k");
+                perror("Error with file k!");
+                return;
             }
 
             dup2(k, 1);
             close(k);
-            if (execvp(cmdPiped[0], cmdPiped) < 0) {
-                perror("Lathos!");
-            }
+
+            execvp(cmdPiped[0], cmdPiped);
+
+            perror("Error with exec!");
+            return;
         } else {
             close(pipeOne[0]);
             close(pipeOne[1]);
             wait(NULL);
-            // parent is waiting
-//            dup2(s2, 1);
-//            close(s2);
-//            waitpid(-1, &s, WUNTRACED | WCONTINUED);
-            printBash();
         }
-
     }
 }
 
-
-
-
+// Input: a string
+// Output: cut the whitespaces
 char* skipwhite(char* s)
 {
     while (isspace(*s)) ++s;
