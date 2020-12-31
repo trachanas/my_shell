@@ -56,9 +56,15 @@ int main(int argc, char **argv){
 
         if (strcmp(userInput, "exit") == 0){
 
-            freeStrings(cmd);
+            for (int i = 0; i < MAX_COM; i++){
+                free(cmd[i]);
+            }
+            free(cmd);
 
-            freeStrings(cmdPipe);
+            for (int i = 0; i < MAX_COM; i++){
+                free(cmdPipe[i]);
+            }
+            free(cmdPipe);
 
             printf("Goodbye!\n");
 
@@ -74,7 +80,6 @@ int main(int argc, char **argv){
             }
 
             if (countPipes == 1 && strstr(userInput, ">>") != NULL){
-                puts("mpike |>>");
 
                 token = NULL;
 
@@ -105,6 +110,7 @@ int main(int argc, char **argv){
                 splitCommands(c1, cmd);
 
                 splitCommands(c2, cmdPipe);
+
                 int s = dup(1);
 
                 execPipedCommandsRed(cmd, cmdPipe, file);
@@ -113,10 +119,13 @@ int main(int argc, char **argv){
 
                 close(s);
 
+                free(piped);
+                free(file);
+                free(c1);
+                free(c2);
                 memset(userInput, '\0', 1000);
             }
             else if (countPipes == 1 && strstr(userInput, ">") != NULL){
-                puts("mpike | > ");
 
                 token = NULL;
 
@@ -151,6 +160,11 @@ int main(int argc, char **argv){
                 execPipedCommandsWithRed(cmd, cmdPipe, file);
                 dup2(s2, 1);
                 close(s2);
+
+                free(piped);
+                free(file);
+                free(c1);
+                free(c2);
                 memset(userInput, '\0', 1000);
             }
             else if (countPipes == 1) {
@@ -174,6 +188,9 @@ int main(int argc, char **argv){
                 splitCommands(c2, cmdPipe);
 
                 execPipedCommands(cmd, cmdPipe);
+
+                free(c1);
+                free(c2);
 
                 memset(userInput, '\0', 1000);
             }
@@ -241,6 +258,11 @@ int main(int argc, char **argv){
 
                 dup2(s2, 1);
                 close(s2);
+
+
+                free(first);
+                free(file1);
+                free(file2);
                 printBash();
 
             }
@@ -294,6 +316,12 @@ int main(int argc, char **argv){
                 dup2(s2, 1);
                 close(s2);
 
+
+                free(first);
+                free(file1);
+                free(file2);
+
+
                 printBash();
 
             }
@@ -325,6 +353,9 @@ int main(int argc, char **argv){
 
                 dup2(save, 1);
                 close(save);
+
+                free(c);
+                free(file);
                 printBash();
             }
 
@@ -358,6 +389,8 @@ int main(int argc, char **argv){
 
                 close(save);
 
+                free(c);
+                free(file);
                 printBash();
 
             }
@@ -389,13 +422,15 @@ int main(int argc, char **argv){
                 execSimpleCommand(cmd);
                 dup2(save, 0);
                 close(save);
+
+                free(c);
+                free(file);
                 printBash();
             }
-
         }
         else {
             resetC(cmd);
-            puts("Simple command");
+
             splitCommands(userInput, cmd);
 
             execSimpleCommand(cmd);

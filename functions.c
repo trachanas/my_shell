@@ -13,12 +13,6 @@
 #define WRITE 1
 
 
-void  freeStrings(char **cmd){
-    for (int i = 0; i < MAX_COM; i++){
-        free(cmd[i]);
-    }
-    free(cmd);
-}
 
 
 // Output: prints the current directory
@@ -36,6 +30,7 @@ void printDirectory(){
 // Output: prints the bash prompt
 void printBash(){
     printDirectory();
+
     printf("myBash >>>  ");
 }
 
@@ -115,7 +110,7 @@ void splitPipes(char **cmd, int *nCom, char *string){
 void execMultipleCommands(char *userInput, int count){
 
     int fd[10][2], nCom;
-    char *c[1000];
+
     pid_t pid;
     //the number of piped commands is countPipes + 1
 
@@ -194,12 +189,6 @@ void execSimpleCommand(char **cmd) {
 }
 
 
-void execPipe(char **cmd, char **cmdPiped){
-    int fd1[2], fd2[2];
-    int pid;
-
-
-}
 
 void execPipedCommands(char **cmd, char **cmdPiped) {
 
